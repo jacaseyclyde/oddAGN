@@ -13,10 +13,13 @@ dependencies:
   - ipython
   - jupyterlab
   - matplotlib
+  - seaborn
   - notebook
   - numpy
   - pandas
   - scikit-learn
+  - astropy
+  - h5py
   - pip:
     - python-dotenv
     - mkdocs
