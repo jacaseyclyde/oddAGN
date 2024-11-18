@@ -167,6 +167,39 @@ def mass_enclosed(r, mstellar, gamma=1):
     return menc
 
 
+def stellar_mass_density(r, mstellar, gamma=1):
+    """Stellar mass density.
+
+    Computes the stellat mass density at radius :math:`r`.
+
+    Parameters
+    ----------
+    r : float or array_like of float
+        The radius at which to compute the mass density.
+        Units: parsec
+    mstellar : float or array_like of float
+        The total stellar mass of the galaxy.
+        Units: Msun
+    gamma : float
+        Determines the inner slope of the galaxy mass profile
+
+    Returns
+    -------
+    rho : float or array_like of float
+        The stellar mass density.
+        Units: Msun
+
+    """
+    r0 = scale_radius(mstellar, gamma=gamma)
+
+    r_term = r0 / (np.power(r, gamma) * np.power(r + r0, 4 - gamma))
+
+    m_term = mstellar * (3 - gamma) / (4 * np.pi)
+
+    rho = r_term * m_term
+    return rho
+
+
 # VELOCITY DISPERSION -----------------------------------------
 def velocity_dispersion(r, mstellar, gamma=1):
     """Virial velocity dispersion.

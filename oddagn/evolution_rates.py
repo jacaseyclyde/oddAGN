@@ -60,6 +60,7 @@ import astropy.constants as const
 # Our own imports ---------------------------------------------------
 from .utilities import coulomb_logarithm
 from .galaxy_properties import velocity_dispersion, effective_radius
+from .galaxy_properties import scale_radius, stellar_mass_density
 
 
 # -----------------------------------------------------------------------------
@@ -104,6 +105,9 @@ def da_dt_dyn(a, mstellar, mbh, q, gamma=1):
         Units: Msun
     q : float or array_like of float
         SMBH mass ratio.
+    gamma : float
+        Determines the inner slope of the galaxy mass profile. Default
+        is 1.
 
     Returns
     -------
@@ -134,7 +138,69 @@ def da_dt_dyn(a, mstellar, mbh, q, gamma=1):
     return da_dt * (u.km / u.s).to(u.pc / u.Gyr)  # pc / Gyr
 
 
-# FUNCTION CATEGORY 2 -----------------------------------------
+def da_dt_sh(a, mstellar, mbh, gamma=1, H=15):
+    """Rate of SMBH pair separation change under stellar hardening.
+
+    Parameters
+    ----------
+    a : float or array_like of float
+        SMBH pair separation
+        Units: parsec
+    mstellar : float or array_like of float
+        Galaxy stellar mass.
+        Units: Msun
+    mbh : float or array_like of float
+        Total SMBH mass.
+        Units: Msun
+    gamma : float
+        Determines the inner slope of the galaxy mass profile. Default
+        is 1.
+    gamma : float
+        The hardening rate. Default is 15.
+
+    Returns
+    -------
+    da_dt : float or array_like of float
+        Rate for change for a.
+        Units: parsec / Gyr
+
+    """
+    r_inf = influence_radius(mbh, mstellar, gamma=gamma)
+    rho_inf = stellar_mass_density(r_inf, mstellar, gamma=gamma)
+    sigma_inf = velocity_dispersion(r_inf, mstellar, gamma=gamma)
+
+    scale = - H * rho_inf / sigma_inf
+    da_dt = scale * np.power(a, 2)
+    return da_dt
+
+
+# IMPORTANT RADII -----------------------------------------
+def influence_radius(mbh, mstellar, gamma=1):
+    """Binary influence radius.
+
+    Calculates the influence radius of a SMBH binary, which we define
+    as the distance from the SMBH binary where the contained stellar
+    mass is twice the binary total mass. Assumes a Dehnen galaxy mass
+    profile.
+
+    Parameters
+    ----------
+    mbh : float or array_like of float
+        Binary total mass.
+        Units: Msun
+    mstellar : float or array_like of float
+        Total galaxy stellar mass.
+        Units: Msun
+    gamma : float
+        Determines the inner slope of the galaxy mass profile. Default
+        is 1.
+
+    """
+    r0 = scale_radius(mstellar, gamma=gamma)
+    scaled_mass = mstellar / (2 * mbh)
+
+    r_inf = r0 / (np.power(scaled_mass, 1 / (3 - gamma)) - 1)
+    return r_inf
 
 
 # FUNCTION CATEGORY n -----------------------------------------
