@@ -155,7 +155,7 @@ def da_dt_sh(a, mstellar, mbh, gamma=1, H=15):
     gamma : float
         Determines the inner slope of the galaxy mass profile. Default
         is 1.
-    gamma : float
+    H : float
         The hardening rate. Default is 15.
 
     Returns
@@ -165,13 +165,49 @@ def da_dt_sh(a, mstellar, mbh, gamma=1, H=15):
         Units: parsec / Gyr
 
     """
+    G = const.G.to(u.pc / u.Msun * (u.km / u.s)**2).value
+    
     r_inf = influence_radius(mbh, mstellar, gamma=gamma)
-    rho_inf = stellar_mass_density(r_inf, mstellar, gamma=gamma)
-    sigma_inf = velocity_dispersion(r_inf, mstellar, gamma=gamma)
+    rho_inf = stellar_mass_density(r_inf, mstellar, gamma=gamma)  # Msun * pc**-3
+    sigma_inf = velocity_dispersion(r_inf, mstellar, gamma=gamma)  # km / s
 
-    scale = - H * rho_inf / sigma_inf
-    da_dt = scale * np.power(a, 2)
-    return da_dt
+    scale = - G * H * rho_inf / sigma_inf  # km s**-1 * pc**-2
+    da_dt = scale * np.power(a, 2)  # km * s**-1
+    return da_dt * (u.km / u.s).to(u.pc / u.Gyr)  # pc / Gyr
+
+
+def da_dt_gw(a, mbh, q):
+    """Rate of SMBH pair separation change under gravitational wave emission.
+
+    Parameters
+    ----------
+    a : float or array_like of float
+        SMBH pair separation
+        Units: parsec
+    mbh : float or array_like of float
+        Total SMBH mass.
+        Units: Msun
+    q : float or array_like of float
+        SMBH mass ratio.
+
+    Returns
+    -------
+    da_dt : float or array_like of float
+        Rate for change for a.
+        Units: parsec / Gyr
+
+    """
+    G = const.G.to(u.pc / u.Msun * (u.km / u.s)**2).value
+    c = const.c.to(u.km / u.s).value
+
+    scale = -(64 / 5) * np.power(G, 3) * np.power(c, -5)  # pc**3 * km * s**-1 * Msun**-3
+
+    reduced_mass = mbh * q * np.power(1 + q, -2.)
+    m_term = reduced_mass * np.square(mbh)  # Msun**3
+    a_term = np.power(a, -3)  # pc**-3
+
+    da_dt = scale * m_term * a_term  # km / s
+    return da_dt * (u.km / u.s).to(u.pc / u.Gyr)  # pc / Gyr
 
 
 # IMPORTANT RADII -----------------------------------------
