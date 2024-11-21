@@ -187,7 +187,35 @@ def log_mstellar_log_mbulge_scaling(log10_mbulge):
     return log10_mstellar
 
 
-# FUNCTION CATEGORY n -----------------------------------------
+# PROBABILITIES -----------------------------------------
+def prob_mbh_mbulge(log10_mbh, log10_mbulge, alpha_mbh, beta_mbh, disp=.4):
+    log10_mbh_centroid = log_mbh_log_mbulge_scaling(
+        log10_mbulge, 
+        alpha=alpha_mbh, 
+        beta=beta_mbh
+    )
+
+    # compute the probability
+    loc = log10_mbh - log10_mbh_centroid
+    exp_term = np.exp(-.5 * np.power(loc / disp, 2))
+    prob = exp_term / (disp * np.sqrt(2 * np.pi))
+    return prob
+
+    
+def prob_mbulge_mstellar_elliptical(log10_mbulge, log10_mstellar, disp=.2):
+    log10_mbulge_centroid = log_mstellar_log_mbulge_scaling(log10_mstellar)
+
+    # compute the probability
+    loc = log10_mbulge - log10_mbulge_centroid
+    exp_term = np.exp(-.5 * np.power(loc / disp, 2))
+    prob = exp_term / (disp * np.sqrt(2 * np.pi))
+    return prob
+    
+def prob_mbulge_mstellar_spiral(log10_mbulge, log10_mstellar):
+    # assuming B/T ∈ [0.1, 0.3] (Sesana 2013) for late-type galaxies
+    BT = np.power(10, log10_mbulge - log10_mstellar)
+    prob = np.where((BT >= 0.10) & (BT <= 0.3), BT * np.log(10) / 0.2, 0)
+    return prob
 
 
 # -----------------------------------------------------------------------------
