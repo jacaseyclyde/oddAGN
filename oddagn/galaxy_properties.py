@@ -233,6 +233,7 @@ def velocity_dispersion(r, mstellar, gamma=1):
 
     # enclosed mass
     vel_disp = np.sqrt(G * menc / r)
+    vel_disp[np.isnan(vel_disp)] = 0
     return vel_disp
 
 

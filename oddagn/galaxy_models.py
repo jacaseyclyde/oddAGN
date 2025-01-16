@@ -251,7 +251,7 @@ def _compute_pairing_redz(
     alpha_t, 
     beta_t, 
     gamma_t, 
-    redz_pair_grid=np.linspace(0, 100, num=1000)
+    redz_pair_grid=np.append([0], np.geomspace(1e-4, 100, num=1000))
 ):
     """Compute the pairing redshift of galaxies which merge at `redz_merge`.
 
@@ -304,16 +304,25 @@ def _compute_pairing_redz(
     ## first we find the interpolation indexes
     interp_idxs = np.sum(age_merge_grid[..., None] >= age_merge, axis=2) - 1  # [P, M, Q, Z]
     interp_idxs = np.swapaxes(interp_idxs, -1, -2)  # [P, M, Z, Q]
+    no_merge_idxs = np.greater_equal(interp_idxs+1, len(age_pair))
+    interp_idxs[no_merge_idxs] = len(age_pair)-2
     
     ## next we interpolate to find the pairing redshifts corresponding to each merger redshift
-    x0 = np.take_along_axis(age_merge_grid, interp_idxs, axis=2)  # [P, M, Z, Q]
-    y0 = redz_pair_grid[interp_idxs]  # [P, M, Z, Q]
-    x1 = np.take_along_axis(age_merge_grid, interp_idxs+1, axis=2)  # [P, M, Z, Q]
-    y1 = redz_pair_grid[interp_idxs+1]  # [P, M, Z, Q]
+    try:
+        x0 = np.take_along_axis(age_merge_grid, interp_idxs, axis=2)  # [P, M, Z, Q]
+        y0 = redz_pair_grid[interp_idxs]  # [P, M, Z, Q]
+        x1 = np.take_along_axis(age_merge_grid, interp_idxs+1, axis=2)  # [P, M, Z, Q]
+        y1 = redz_pair_grid[interp_idxs+1]  # [P, M, Z, Q]
+    except IndexError as e:
+        raise IndexError(
+            f"interp_idxs.max: {np.max(interp_idxs)}"
+            f"\nage_merge.max: {np.max(age_merge)}"
+            f"\nage_merge_grid.max: {np.max(age_merge_grid)}"
+                        ) from e
 
     # estimate pairing redshift
     redz_pair = y0 + (age_merge[None, :, None] - x0) * (y1 - y0) / (x1 - x0)  # [P, M, Z, Q]
-    return redz_pair
+    return redz_pair, no_merge_idxs
 
 
 def galaxy_merger_rate(
@@ -334,7 +343,7 @@ def galaxy_merger_rate(
     beta_t, 
     gamma_t, 
     cosmo=cosmo,
-    redz_pair_grid=np.linspace(0, 100, num=1000)
+    redz_pair_grid=np.append([0], np.geomspace(1e-4, 100, num=1000))
 ):
     """Compute the galaxy merger rate.
 
@@ -385,7 +394,7 @@ def galaxy_merger_rate(
 
     """
     # compute the pairing redshift from the merger timescale
-    redz_pair = _compute_pairing_redz(
+    redz_pair, no_merge = _compute_pairing_redz(
         log10_mstellar, 
         redz, 
         mratq, 
@@ -415,6 +424,7 @@ def galaxy_merger_rate(
         beta_t=beta_t[:, None, None, None],
         gamma_t=gamma_t[:, None, None, None],
     )
+    gpr[no_merge] = 0
 
     # "Compute" galaxy merger rate. Included for completeness
     # or future modification as an assumption
@@ -441,7 +451,7 @@ def bulge_merger_rate(
     beta_t, 
     gamma_t, 
     cosmo=cosmo,
-    redz_pair_grid=np.linspace(0, 100, num=1000),
+    redz_pair_grid=np.append([0], np.geomspace(1e-4, 100, num=1000)),
     fet0=.587,
     zet0=2.808,
     ket=-3.775,
