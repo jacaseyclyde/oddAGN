@@ -182,6 +182,7 @@ def da_dt_sh(a, mstellar, mbh, gamma=1, H=15):
 
     # compute and return the binary separation evolution
     scale = - G * H * rho_inf / sigma_inf  # km s**-1 * pc**-2
+    scale[np.isnan(scale)] = 0
     da_dt = scale * np.power(a, 2)  # km * s**-1
     return da_dt * (u.km / u.s).to(u.pc / u.Gyr)  # pc / Gyr
 
@@ -278,7 +279,7 @@ def da_dt(a, mstellar, mbh, q, gamma=1, H=15):
 
     # combine all evolution rates in relevant regimes
     dadt = np.where(a > a_hard, dadtdyn, dadtsh+dadtgw)
-    return dadt
+    return np.abs(dadt)
 
 
 # RESIDENCE TIMESCALES ------------------------------------
@@ -346,9 +347,15 @@ def influence_radius(mbh, mstellar, gamma=1):
 
     """
     r0 = scale_radius(mstellar, gamma=gamma)
-    scaled_mass = mstellar / (2 * mbh)
+    log10_mstellar = np.log10(mstellar)
+    log10_mbh = np.log10(mbh)
+    log10_scaled_mass = log10_mstellar - log10_mbh - np.log10(2)
+    scaled_mass = np.power(10, log10_scaled_mass)
+    # scaled_mass = mstellar / (2 * mbh)
 
     r_inf = r0 / (np.power(scaled_mass, 1 / (3 - gamma)) - 1)
+    r_inf[np.isnan(r_inf)] = np.inf
+    r_inf[r_inf < 0] = np.inf
     return r_inf
 
 
@@ -373,9 +380,14 @@ def hard_binary_separation(mbh, mstellar, gamma=1):
 
     """
     r0 = scale_radius(mstellar, gamma=gamma)
-    scaled_mass = mstellar / mbh
+    log10_mstellar = np.log10(mstellar)
+    log10_mbh = np.log10(mbh)
+    log10_scaled_mass = log10_mstellar - log10_mbh
+    scaled_mass = np.power(10, log10_scaled_mass)
+    # scaled_mass = mstellar / mbh
 
-    a_hard = r0 / (np.power(scaled_mass, 1 / (3 - gamma)) - 1)
+    a_hard = r0 / (np.power(10, log10_scaled_mass / (3 - gamma)) - 1)
+    a_hard[np.isnan(a_hard)] = np.inf
     return a_hard
 
 
